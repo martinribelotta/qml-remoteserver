@@ -16,8 +16,12 @@ qt_add_qml_module(appqml-remoteserver
     URI qml-remoteserver
     VERSION 1.0
     QML_FILES
-    SOURCES genericqmlbridge.h genericqmlbridge.cpp slipprocessor.h slipprocessor.cpp
-
+    SOURCES
+        genericqmlbridge.h
+        genericqmlbridge.cpp
+        slipprocessor.h
+        slipprocessor.cpp
+        datadecoder.hpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

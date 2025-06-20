@@ -49,7 +49,7 @@ ApplicationWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(0.18, 0.18, 0.18, 1)
+        color: Qt.color("#2e2e2e")
 
         GridLayout {
             anchors.fill: parent
@@ -61,7 +61,7 @@ ApplicationWindow {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                color: Qt.rgba(0.243, 0.243, 0.243, 1)
+                color: Qt.color("#3e3e3e")
                 radius: 10
 
                 ColumnLayout {
@@ -71,20 +71,20 @@ ApplicationWindow {
                     Label {
                         text: "Temperature"
                         font.pixelSize: 20
-                        color: Qt.rgba(1, 1, 1, 1)
+                        color: Qt.color("#ffffff")
                         Layout.alignment: Qt.AlignHCenter
                     }
 
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        color: Qt.rgba(0, 0, 0, 0)
+                        color: Qt.color("transparent")
                         
                         Text {
                             anchors.centerIn: parent
                             text: mainWindow.formatTemperature(mainWindow.temperature)
                             font.pixelSize: Math.min(40, parent.width / 6)
-                            color: mainWindow.temperature > 50 ? Qt.rgba(1, 0, 0, 1) : Qt.rgba(1, 1, 1, 1)
+                            color: mainWindow.temperature > 50 ? Qt.color("#ff0000") : Qt.color("#ffffff")
                         }
                     }
 
@@ -98,7 +98,7 @@ ApplicationWindow {
                         background: Rectangle {
                             implicitWidth: 200
                             implicitHeight: 20
-                            color: Qt.rgba(0.1176, 0.1176, 0.1176, 1)
+                            color: Qt.color("#1e1e1e")
                             radius: 3
                         }
 
@@ -110,7 +110,7 @@ ApplicationWindow {
                                 width: parent.width * Math.max(0, Math.min(1, (mainWindow.temperature - tempProgressBar.from) / (tempProgressBar.to - tempProgressBar.from)))
                                 height: parent.height
                                 radius: 3
-                                color: mainWindow.temperature > 50 ? Qt.rgba(1, 0, 0, 1) : Qt.rgba(0, 0.6667, 1, 1)
+                                color: mainWindow.temperature > 50 ? Qt.color("#ff0000") : Qt.color("#00aaff")
                             }
                         }
                     }

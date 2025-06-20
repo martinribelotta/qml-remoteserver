@@ -1,5 +1,6 @@
 #include "genericqmlbridge.h"
 #include "slipprocessor.h"
+#include "datadecoder.hpp"
 
 #include <QTimer>
 
@@ -121,57 +122,54 @@ void GenericQMLBridge::processCommand(const QByteArray &data)
     }
 
     QVariant value;
+    DataDecoder decoder;
+    decoder.setEndianess(DataDecoder::LittleEndian);
 
     switch (cmdType) {
-    case 0x0:
+    case CMD_GET_PROPERTY_LIST:
         sendPropertyList();
         return;
-
-    case 0x1:
-        if (data.length() >= 6) {
-            qint32 intVal;
-            memcpy(&intVal, data.data() + 2, 4);
-            value = QVariant(intVal);
+    case CMD_SET_INT:
+        value = decoder.decodeInt32(data, 2);
+        if (!value.isValid()) {
+            qDebug() << "Error: SET_INT packet too short or invalid";
+            return;
         }
         break;
-
-    case 0x2:
-        if (data.length() >= 6) {
-            float floatVal;
-            memcpy(&floatVal, data.data() + 2, 4);
-            value = QVariant(floatVal);
+    case CMD_SET_FLOAT:
+        value = decoder.decodeFloat(data, 2);
+        if (!value.isValid()) {
+            qDebug() << "Error: SET_FLOAT packet too short or invalid";
+            return;
         }
         break;
-
-    case 0x3:
-        if (data.length() > 2) {
-            QString stringVal = QString::fromUtf8(data.mid(2));
-            value = QVariant(stringVal);
+    case CMD_SET_STRING: {
+        QByteArray strBytes = data.mid(2);
+        QString stringVal = QString::fromUtf8(strBytes);
+        value = QVariant(stringVal);
+        break;
+    }
+    case CMD_SET_BOOL:
+        value = decoder.decodeBool(data, 2);
+        if (!value.isValid()) {
+            qDebug() << "Error: SET_BOOL packet too short or invalid";
+            return;
         }
         break;
-
-    case 0x4:
-        if (data.length() >= 3) {
-            bool boolVal = data[2] != 0;
-            value = QVariant(boolVal);
-        }
-        break;
-
-    case 0x5:
-    {
+    case CMD_INVOKE_METHOD: {
         QString methodName = m_propertyIdMap.value(propId);
         if (m_methods.contains(methodName)) {
             QMetaMethod method = m_methods[methodName];
             method.invoke(prop.object(), Qt::DirectConnection);
             qDebug() << "Method invoked:" << methodName;
         }
-    }
         return;
+    }
     }
 
     if (value.isValid()) {
         bool success = prop.write(value);
-        qDebug() << "Property updated:" << propName << "(" << propId << ")" << "=" << value << "Success:" << success;
+        qDebug() << "Property updated:" << propName << "(" << propId << ") =" << value << "Success:" << success;
     }
 }
 
@@ -361,7 +359,7 @@ void GenericQMLBridge::stopHeartbeat()
 void GenericQMLBridge::sendHeartbeat()
 {
     QByteArray heartbeat;
-    heartbeat.append(static_cast<char>(0xFF));
+    heartbeat.append(static_cast<char>(CMD_HEARTBEAT));
     
     sendSlipDataToTcp(heartbeat);
     

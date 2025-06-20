@@ -7,6 +7,16 @@ import threading
 import json
 import math
 from slip_processor import SlipProcessor
+from enum import IntEnum
+
+class ProtocolCommand(IntEnum):
+    GET_PROPERTY_LIST = 0x00
+    SET_INT           = 0x01
+    SET_FLOAT         = 0x02
+    SET_STRING        = 0x03
+    SET_BOOL          = 0x04
+    INVOKE_METHOD     = 0x05
+    HEARTBEAT         = 0xFF
 
 class DashboardTester:
     def __init__(self, host='localhost', port=8080):
@@ -40,17 +50,17 @@ class DashboardTester:
         time.sleep(1)
 
     def send_float(self, prop_id, value):
-        data = struct.pack('<BBf', 0x02, prop_id, value)
+        data = struct.pack('<BBf', ProtocolCommand.SET_FLOAT, prop_id, value)
         encoded_data = SlipProcessor.encode_slip(data)
         self.sock.send(encoded_data)
 
     def send_bool(self, prop_id, value):
-        data = struct.pack('<BBB', 0x04, prop_id, 1 if value else 0)
+        data = struct.pack('<BBB', ProtocolCommand.SET_BOOL, prop_id, 1 if value else 0)
         encoded_data = SlipProcessor.encode_slip(data)
         self.sock.send(encoded_data)
 
     def send_int(self, prop_id, value):
-        data = struct.pack('<BBi', 0x01, prop_id, value)
+        data = struct.pack('<BBi', ProtocolCommand.SET_INT, prop_id, value)
         encoded_data = SlipProcessor.encode_slip(data)
         self.sock.send(encoded_data)
 
@@ -67,7 +77,7 @@ class DashboardTester:
 
     def process_received_packet(self, packet):
         try:
-            if len(packet) >= 2 and packet[0] == 0xFF and packet[1] == 0xFF:
+            if len(packet) >= 2 and packet[0] == ProtocolCommand.HEARTBEAT and packet[1] == ProtocolCommand.HEARTBEAT:
                 try:
                     end_idx = packet.index(b'\n', 2)
                     json_data = packet[2:end_idx].decode('utf-8')
@@ -87,7 +97,7 @@ class DashboardTester:
             print(f"  {name}: ID={info['id']}, Type={info['type']}")
 
     def get_property_list(self):
-        data = bytes([0x00, 0x00])
+        data = bytes([ProtocolCommand.GET_PROPERTY_LIST, ProtocolCommand.GET_PROPERTY_LIST])
         encoded_data = SlipProcessor.encode_slip(data)
         self.sock.send(encoded_data)
 

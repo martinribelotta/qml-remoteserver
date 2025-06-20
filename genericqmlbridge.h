@@ -24,6 +24,17 @@ class GenericQMLBridge : public QObject
     Q_PROPERTY(int connectedClients READ connectedClients NOTIFY connectedClientsChanged)
 
 public:
+    enum ProtocolCommand {
+        CMD_GET_PROPERTY_LIST = 0x00,
+        CMD_SET_INT           = 0x01,
+        CMD_SET_FLOAT         = 0x02,
+        CMD_SET_STRING        = 0x03,
+        CMD_SET_BOOL          = 0x04,
+        CMD_INVOKE_METHOD     = 0x05,
+        CMD_HEARTBEAT         = 0xFF
+    };
+    Q_ENUM(ProtocolCommand)
+
     explicit GenericQMLBridge(QObject *parent = nullptr);
     virtual ~GenericQMLBridge();
 
