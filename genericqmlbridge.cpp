@@ -74,8 +74,8 @@ void GenericQMLBridge::scanObjectProperties(QObject *obj, const QString &prefix)
                 m_propertyIdMap[id] = propName;
                 m_propertyNameMap[propName] = id;
 
-                qDebug() << "Propiedad detectada:" << propName
-                         << "Tipo:" << prop.typeName()
+                qDebug() << "Detected property:" << propName
+                         << "Type:" << prop.typeName()
                          << "ID:" << id;
             }
         }
@@ -86,7 +86,7 @@ void GenericQMLBridge::scanObjectProperties(QObject *obj, const QString &prefix)
         if (method.methodType() == QMetaMethod::Slot) {
             QString methodName = prefix.isEmpty() ? method.name() : prefix + "." + method.name();
             m_methods[methodName] = method;
-            qDebug() << "Método detectado:" << methodName;
+            qDebug() << "Detected method:" << methodName;
         }
     }
     QObjectList children = obj->findChildren<QObject*>(QString(), Qt::FindDirectChildrenOnly);
