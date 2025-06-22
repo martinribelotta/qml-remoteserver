@@ -3,6 +3,9 @@
 #include "datadecoder.hpp"
 
 #include <QTimer>
+#include <QCborMap>
+#include <QCborValue>
+#include <QCborStreamWriter>
 
 GenericQMLBridge::GenericQMLBridge(QObject *parent)
     : QObject(parent)
@@ -175,19 +178,18 @@ void GenericQMLBridge::processCommand(const QByteArray &data)
 
 void GenericQMLBridge::sendPropertyList()
 {
-    QJsonObject propList;
+    QCborMap propList;
     for (auto it = m_propertyNameMap.begin(); it != m_propertyNameMap.end(); ++it) {
         QQmlProperty prop = m_properties[it.key()];
-        propList[it.key()] = QJsonObject{
-            {"id", it.value()},
-            {"type", prop.property().typeName()}
-        };
+        QCborMap entry;
+        entry[QStringLiteral("id")] = it.value();
+        entry[QStringLiteral("type")] = prop.property().typeName();
+        propList[it.key()] = entry;
     }
-
-    QJsonDocument doc(propList);
-    QByteArray json = doc.toJson(QJsonDocument::Compact);
-    QByteArray packet = QByteArray("\xFF\xFF", 2) + json + QByteArray("\n");
-
+    QByteArray cbor;
+    QCborStreamWriter writer(&cbor);
+    QCborValue(propList).toCbor(writer);
+    QByteArray packet = QByteArray("\xFF\xFF", 2) + cbor;
     sendSlipData(packet);
 }
 

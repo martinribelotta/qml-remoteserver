@@ -4,7 +4,7 @@ import time
 import random
 import struct
 import threading
-import json
+import cbor2
 import math
 from slip_processor import SlipProcessor
 from enum import IntEnum
@@ -79,18 +79,17 @@ class DashboardTester:
         try:
             if len(packet) >= 2 and packet[0] == ProtocolCommand.HEARTBEAT and packet[1] == ProtocolCommand.HEARTBEAT:
                 try:
-                    end_idx = packet.index(b'\n', 2)
-                    json_data = packet[2:end_idx].decode('utf-8')
-                    self.process_property_list(json_data)
-                except (ValueError, UnicodeDecodeError) as e:
-                    print(f"Error procesando lista de propiedades: {e}")
+                    cbor_data = packet[2:]
+                    props = cbor2.loads(cbor_data)
+                    self.process_property_list(props)
+                except Exception as e:
+                    print(f"Error processing CBOR property list: {e}")
             else:
                 print(f"Paquete recibido: {packet.hex()}")
         except Exception as e:
             print(f"Error procesando paquete: {e}")
 
-    def process_property_list(self, json_data):
-        props = json.loads(json_data)
+    def process_property_list(self, props):
         print("Received properties:")
         for name, info in props.items():
             self.properties[name] = info
