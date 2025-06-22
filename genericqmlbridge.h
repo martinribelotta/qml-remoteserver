@@ -68,7 +68,6 @@ signals:
 private slots:
     void handleSerialData();
     void handleSerialError(QSerialPort::SerialPortError error);
-    void onQMLFileChanged();
     void handleTcpNewConnection();
     void handleTcpData();
     void handleTcpDisconnected();
@@ -79,7 +78,6 @@ private:
     QQmlApplicationEngine *m_engine;
     QObject *m_rootObject;
     QSerialPort *m_serialPort;
-    QFileSystemWatcher *m_fileWatcher;
     QTcpServer *m_tcpServer;
     QList<QTcpSocket*> m_tcpClients;
     QHash<QString, QQmlProperty> m_properties;

@@ -13,7 +13,6 @@ GenericQMLBridge::GenericQMLBridge(QObject *parent)
     , m_engine(new QQmlApplicationEngine(this))
     , m_rootObject(nullptr)
     , m_serialPort(nullptr)
-    , m_fileWatcher(new QFileSystemWatcher(this))
     , m_tcpServer(nullptr)
     , m_heartbeatTimer(new QTimer(this))
     , m_configuredBaudRate(115200)
@@ -22,8 +21,6 @@ GenericQMLBridge::GenericQMLBridge(QObject *parent)
 {
     m_heartbeatTimer->setInterval(5000);
     connect(m_heartbeatTimer, &QTimer::timeout, this, &GenericQMLBridge::checkConnections);
-    connect(m_fileWatcher, &QFileSystemWatcher::fileChanged, this, &GenericQMLBridge::onQMLFileChanged);
-    
     connect(m_slipProcessor, &SlipProcessor::packetReceived, this, &GenericQMLBridge::processCommand);
 }
 
@@ -42,7 +39,6 @@ bool GenericQMLBridge::loadQML(const QString &qmlFile)
     }
 
     m_rootObject = m_engine->rootObjects().first();
-    m_fileWatcher->addPath(qmlFile);
     discoverProperties();
 
     qDebug() << "QML loaded successfully:" << qmlFile;
@@ -228,15 +224,6 @@ void GenericQMLBridge::handleSerialData()
 {
     QByteArray data = m_serialPort->readAll();
     m_slipProcessor->onDataReceived(data);
-}
-
-void GenericQMLBridge::onQMLFileChanged()
-{
-    qDebug() << "QML file modified, reloading...";
-    
-    QByteArray reloadMsg = QByteArray("\xFF\xFE", 2) + QByteArray("reload\n");
-    
-    sendSlipData(reloadMsg);
 }
 
 QStringList GenericQMLBridge::getAvailablePorts() const
