@@ -54,15 +54,24 @@ Requests the server to send the complete list of available properties.
 ```
 
 **Response:**
-The server responds with a special packet containing JSON property list:
+The server responds with a special packet containing the property list encoded in CBOR:
 
 ```plaintext
-[0xFF, 0xFF, <JSON_DATA>, 0x0A]
+[0xFF, 0xFF, <CBOR_DATA>]
 ```
 
-**JSON Format:**
+**CBOR Format:**
 
-```json
+The CBOR data is a map where each key is the property name and the value is a map with keys `id` and `type`:
+
+- Key: property name (string)
+- Value: map with keys:
+  - `id`: integer property ID
+  - `type`: string type name
+
+**Example (CBOR as diagnostic notation):**
+
+```cbor-diag
 {
   "temperature": {"id": 1, "type": "float"},
   "pressure": {"id": 2, "type": "float"},
@@ -70,6 +79,8 @@ The server responds with a special packet containing JSON property list:
   "tank_level": {"id": 4, "type": "int"}
 }
 ```
+
+> Note: The actual data is binary CBOR, not JSON. Use a CBOR decoder on the client side.
 
 ### 0x01 - Set Integer Property
 
@@ -206,7 +217,7 @@ Properties are automatically assigned sequential IDs starting from 1 when the QM
 ### Property Discovery Sequence
 
 1. Client sends: `[0x00, 0x00]` (Get Property List)
-2. Server responds with JSON containing all properties and their IDs
+2. Server responds with property list encoded in CBOR
 3. Client uses the received IDs for subsequent property updates
 
 ### Example Property Mapping
@@ -233,8 +244,10 @@ Properties are automatically assigned sequential IDs starting from 1 when the QM
 2. **Server responds with property list:**
 
    ```plaintext
-   SLIP: [0xC0, 0xFF, 0xFF, {"temperature":{"id":1,"type":"float"}...}, 0x0A, 0xC0]
+   SLIP: [0xC0, 0xFF, 0xFF, <CBOR_DATA>, 0xC0]
    ```
+
+   Where `<CBOR_DATA>` is a CBOR-encoded map as described above.
 
 3. **Client sets temperature to 25.5°C:**
 
