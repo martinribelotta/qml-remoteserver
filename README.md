@@ -65,7 +65,7 @@ qml-remoteserver/
    - Handles escape sequences and framing
    - Ensures data integrity over unreliable channels
 
-3. **QML Dashboard**: Responsive user interface that:
+3. **QML Dashboard**: Example for responsive user interface that:
    - Displays live data with appropriate precision
    - Provides visual feedback and animations
    - Adapts to different screen sizes
