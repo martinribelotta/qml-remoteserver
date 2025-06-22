@@ -1,12 +1,14 @@
 #include "genericqmlbridge.h"
 #include "slipprocessor.h"
 #include "datadecoder.hpp"
+#include "QmlPropertyObserver.hpp"
 
 #include <QTimer>
 #include <QCborMap>
 #include <QCborValue>
 #include <QCborStreamWriter>
 #include <QCborArray>
+#include <QSet>
 
 GenericQMLBridge::GenericQMLBridge(QObject *parent)
     : QObject(parent)
@@ -153,6 +155,57 @@ void GenericQMLBridge::processCommand(const QByteArray &data)
             method.invoke(m_properties[methodName].object(), Qt::DirectConnection, QGenericArgument(args.value(0).typeName(), args.value(0).data()));
             qDebug() << "Method invoked:" << methodName << "with args:" << args;
         }
+        return;
+    }
+    case CMD_WATCH_PROPERTY: {
+        for (auto conn : m_watchedConnections.values())
+            QObject::disconnect(conn);
+        m_watchedConnections.clear();
+        m_watchedPropertyIds.clear();
+        if (payloadLen <= 0) {
+            qDebug() << "Error: WATCH_PROPERTY missing CBOR array payload";
+            return;
+        }
+        QCborValue cbor = QCborValue::fromCbor(QByteArray(payload, payloadLen));
+        if (!cbor.isArray()) {
+            qDebug() << "Error: WATCH_PROPERTY payload is not a CBOR array";
+            return;
+        }
+        for (const QCborValue& v : cbor.toArray()) {
+            if (!v.isInteger())
+                continue;
+            quint8 id = static_cast<quint8>(v.toInteger());
+            
+            m_watchedPropertyIds.insert(id);
+            
+            QString propName = m_propertyIdMap.value(id);
+            
+            if (!m_properties.contains(propName))
+                continue;
+            
+            QQmlProperty qmlProp = m_properties[propName];
+
+            auto observer = QmlPropertyObserver::watch(qmlProp, [this, id](QVariant newValue) {
+                QCborMap change;
+                change[QStringLiteral("id")] = id;
+                change[QStringLiteral("value")] = QCborValue::fromVariant(newValue);
+                QByteArray cborData;
+                QCborStreamWriter writer(&cborData);
+                QCborValue(change).toCbor(writer);
+                QByteArray packet;
+                packet.append(static_cast<char>(RESP_PROPERTY_CHANGE));
+                packet.append(cborData);
+                sendSlipData(packet);
+            }, this);
+
+            if (!observer) {
+                qDebug() << "Failed to create property observer for ID:" << id;
+                continue;
+            }
+
+            m_watchedConnections[id] = observer->connection();
+        }
+        qDebug() << "Now watching property IDs:" << m_watchedPropertyIds;
         return;
     }
     case CMD_HEARTBEAT:

@@ -14,9 +14,11 @@ class ProtocolCommand(IntEnum):
     SET_PROPERTY      = 0x02
     INVOKE_METHOD     = 0x03
     HEARTBEAT         = 0x04
+    WATCH_PROPERTY    = 0x20
 
 class ProtocolResponse(IntEnum):
     GET_PROPERTY_LIST = 0x81
+    PROPERTY_CHANGE   = 0x82
 
 class DashboardTester:
     def __init__(self, host='localhost', port=8080):
@@ -70,6 +72,12 @@ class DashboardTester:
                 print(f"Error en receive_data: {e}")
                 break
 
+    def watch_properties(self, id_list):
+        cbor_data = cbor2.dumps(id_list)
+        data = bytes([ProtocolCommand.WATCH_PROPERTY]) + cbor_data
+        encoded_data = SlipProcessor.encode_slip(data)
+        self.sock.send(encoded_data)
+
     def process_received_packet(self, packet):
         try:
             cmd = packet[0]
@@ -80,6 +88,13 @@ class DashboardTester:
                     self.process_property_list(props)
                 except Exception as e:
                     print(f"Error decoding CBOR property list: {e}")
+            elif cmd == ProtocolResponse.PROPERTY_CHANGE:
+                try:
+                    cbor_data = packet[1:]
+                    changes = cbor2.loads(cbor_data)
+                    print(f"Property change notification: {changes}")
+                except Exception as e:
+                    print(f"Error decoding CBOR property change: {e}")
             else:
                 print(f"Received packet with unknown or unhandled command: {packet.hex()}")
         except Exception as e:
@@ -208,6 +223,19 @@ class DashboardTester:
     def run(self):
         print("Starting dashboard test simulation...")
         print("Generating smooth variations for temperature, pressure, humidity, and tank level...")
+        # Watch solo la propiedad 'setpoint' después de recibir property list
+        while not self.properties:
+            time.sleep(0.1)
+        setpoint_id = None
+        for name, info in self.properties.items():
+            if name.lower() == 'setpoint':
+                setpoint_id = info['id']
+                break
+        if setpoint_id is not None:
+            print(f"Watching property 'setpoint' (ID: {setpoint_id})")
+            self.watch_properties([setpoint_id])
+        else:
+            print("No 'setpoint' property found to watch.")
         try:
             self.generate_smooth_values()
         except KeyboardInterrupt:

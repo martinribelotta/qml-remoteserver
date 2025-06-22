@@ -18,6 +18,7 @@ ApplicationWindow {
     property bool pump2Active: false
     property bool alarmActive: false
     property int tankLevel: 75
+    property int setpoint: 50
 
     function formatTemperature(temp) {
         if (isNaN(temp)) return "--°C"
@@ -424,6 +425,45 @@ ApplicationWindow {
                             font.weight: Font.Bold
                             style: Text.Outline
                             styleColor: Qt.color("#000000")
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.columnSpan: 3
+                color: Qt.color("#3e3e3e")
+                radius: 10
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 10
+
+                    Label {
+                        text: "Setpoint"
+                        font.pixelSize: 20
+                        color: Qt.color("#ffffff")
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
+                    Slider {
+                        id: setpointSlider
+                        from: 0
+                        to: 100
+                        value: mainWindow.setpoint
+                        stepSize: 1
+                        onValueChanged: mainWindow.setpoint = value
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.fillWidth: true
+
+                        Label {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.top: parent.bottom
+                            text: Math.round(parent.value)
+                            color: Qt.color("#ffffff")
+                            font.pixelSize: 16
                         }
                     }
                 }

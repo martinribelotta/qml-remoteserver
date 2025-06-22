@@ -3,6 +3,7 @@
     "files.associations": {
         "qtcpserver": "cpp",
         "qtimer": "cpp",
-        "qtcpsocket": "cpp"
+        "qtcpsocket": "cpp",
+        "qcborarray": "cpp"
     }
 }

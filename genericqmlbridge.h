@@ -28,12 +28,14 @@ public:
         CMD_GET_PROPERTY_LIST = 0x01,
         CMD_SET_PROPERTY      = 0x02,
         CMD_INVOKE_METHOD     = 0x03,
-        CMD_HEARTBEAT         = 0x04
+        CMD_HEARTBEAT         = 0x04,
+        CMD_WATCH_PROPERTY    = 0x20
     };
     Q_ENUM(ProtocolCommand)
 
     enum ProtocolResponse {
-        RESP_GET_PROPERTY_LIST = 0x81
+        RESP_GET_PROPERTY_LIST = 0x81,
+        RESP_PROPERTY_CHANGE   = 0x82,
     };
     Q_ENUM(ProtocolResponse)
 
@@ -91,6 +93,8 @@ private:
     int m_configuredTcpPort;
     SlipProcessor *m_slipProcessor;
     QHash<QTcpSocket*, SlipProcessor*> m_tcpSlipProcessors;
+    QSet<quint8> m_watchedPropertyIds;
+    QHash<quint8, QMetaObject::Connection> m_watchedConnections;
 
     void scanObjectProperties(QObject *obj, const QString &prefix = "");
     void sendPropertyList();

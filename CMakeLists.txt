@@ -22,6 +22,7 @@ qt_add_qml_module(appqml-remoteserver
         slipprocessor.h
         slipprocessor.cpp
         datadecoder.hpp
+        QmlPropertyObserver.hpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
