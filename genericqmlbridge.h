@@ -25,15 +25,15 @@ class GenericQMLBridge : public QObject
 
 public:
     enum ProtocolCommand {
-        CMD_GET_PROPERTY_LIST = 0x00,
-        CMD_SET_PROPERTY      = 0x10,
-        CMD_INVOKE_METHOD     = 0x05,
-        CMD_HEARTBEAT         = 0xFF
+        CMD_GET_PROPERTY_LIST = 0x01,
+        CMD_SET_PROPERTY      = 0x02,
+        CMD_INVOKE_METHOD     = 0x03,
+        CMD_HEARTBEAT         = 0x04
     };
     Q_ENUM(ProtocolCommand)
 
     enum ProtocolResponse {
-        RESP_GET_PROPERTY_LIST = 0x80
+        RESP_GET_PROPERTY_LIST = 0x81
     };
     Q_ENUM(ProtocolResponse)
 

@@ -10,13 +10,13 @@ from slip_processor import SlipProcessor
 from enum import IntEnum
 
 class ProtocolCommand(IntEnum):
-    GET_PROPERTY_LIST = 0x00
-    SET_PROPERTY      = 0x10
-    INVOKE_METHOD     = 0x05
-    HEARTBEAT         = 0xFF
+    GET_PROPERTY_LIST = 0x01
+    SET_PROPERTY      = 0x02
+    INVOKE_METHOD     = 0x03
+    HEARTBEAT         = 0x04
 
 class ProtocolResponse(IntEnum):
-    GET_PROPERTY_LIST = 0x80
+    GET_PROPERTY_LIST = 0x81
 
 class DashboardTester:
     def __init__(self, host='localhost', port=8080):
