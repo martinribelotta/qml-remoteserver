@@ -6,6 +6,7 @@
 #include <QCborMap>
 #include <QCborValue>
 #include <QCborStreamWriter>
+#include <QCborArray>
 
 GenericQMLBridge::GenericQMLBridge(QObject *parent)
     : QObject(parent)
@@ -102,77 +103,68 @@ void GenericQMLBridge::scanObjectProperties(QObject *obj, const QString &prefix)
 
 void GenericQMLBridge::processCommand(const QByteArray &data)
 {
-    if (data.length() < 2) return;
-
+    if (data.isEmpty()) return;
     quint8 cmdType = static_cast<quint8>(data[0]);
-    quint8 propId = static_cast<quint8>(data[1]);
-
-    QString propName = m_propertyIdMap.value(propId);
-
-    qDebug() << "Processing command:" << cmdType
-             << "Property ID:" << propId
-             << "Property Name:" << propName;
-
-    if (propName.isEmpty()) {
-        qDebug() << "Property not found for ID:" << propId;
-        return;
-    }
-
-    QQmlProperty prop = m_properties.value(propName);
-    if (!prop.isValid()) {
-        qDebug() << "Invalid property:" << propName;
-        return;
-    }
-
-    QVariant value;
-    DataDecoder decoder;
-    decoder.setEndianess(DataDecoder::LittleEndian);
+    const char* payload = data.constData() + 1;
+    int payloadLen = data.size() - 1;
 
     switch (cmdType) {
     case CMD_GET_PROPERTY_LIST:
         sendPropertyList();
         return;
-    case CMD_SET_INT:
-        value = decoder.decodeInt32(data, 2);
-        if (!value.isValid()) {
-            qDebug() << "Error: SET_INT packet too short or invalid";
+    case CMD_SET_PROPERTY: {
+        if (payloadLen <= 0) {
+            qDebug() << "Error: SET_PROPERTY missing CBOR map payload";
             return;
         }
-        break;
-    case CMD_SET_FLOAT:
-        value = decoder.decodeFloat(data, 2);
-        if (!value.isValid()) {
-            qDebug() << "Error: SET_FLOAT packet too short or invalid";
+        QCborValue cbor = QCborValue::fromCbor(QByteArray(payload, payloadLen));
+        if (!cbor.isMap()) {
+            qDebug() << "Error: SET_PROPERTY payload is not a CBOR map";
             return;
         }
-        break;
-    case CMD_SET_STRING: {
-        QByteArray strBytes = data.mid(2);
-        QString stringVal = QString::fromUtf8(strBytes);
-        value = QVariant(stringVal);
-        break;
-    }
-    case CMD_SET_BOOL:
-        value = decoder.decodeBool(data, 2);
-        if (!value.isValid()) {
-            qDebug() << "Error: SET_BOOL packet too short or invalid";
-            return;
-        }
-        break;
-    case CMD_INVOKE_METHOD: {
-        QString methodName = m_propertyIdMap.value(propId);
-        if (m_methods.contains(methodName)) {
-            QMetaMethod method = m_methods[methodName];
-            method.invoke(prop.object(), Qt::DirectConnection);
-            qDebug() << "Method invoked:" << methodName;
+        QCborMap map = cbor.toMap();
+        for (auto it = map.begin(); it != map.end(); ++it) {
+            QString propName = it.key().toString();
+            if (!m_properties.contains(propName)) {
+                qDebug() << "Unknown property in SET_PROPERTY:" << propName;
+                continue;
+            }
+            QQmlProperty prop = m_properties[propName];
+            QVariant value = it.value().toVariant();
+            bool success = prop.write(value);
+            qDebug() << "Property updated:" << propName << "=" << value << "Success:" << success;
         }
         return;
     }
+    case CMD_INVOKE_METHOD: {
+        if (payloadLen < 1) {
+            qDebug() << "Error: INVOKE_METHOD missing method id";
+            return;
+        }
+        quint8 methodId = static_cast<quint8>(payload[0]);
+        QString methodName = m_propertyIdMap.value(methodId);
+        QCborArray params;
+        if (payloadLen > 1) {
+            QCborValue cborParams = QCborValue::fromCbor(QByteArray(payload + 1, payloadLen - 1));
+            if (cborParams.isArray())
+                params = cborParams.toArray();
+        }
+        if (m_methods.contains(methodName)) {
+            QMetaMethod method = m_methods[methodName];
+            QList<QVariant> args;
+            for (const QCborValue& v : params)
+                args << v.toVariant();
+            method.invoke(m_properties[methodName].object(), Qt::DirectConnection, QGenericArgument(args.value(0).typeName(), args.value(0).data()));
+            qDebug() << "Method invoked:" << methodName << "with args:" << args;
+        }
+        return;
     }
-
-    if (value.isValid()) {
-        bool success = prop.write(value);
-        qDebug() << "Property updated:" << propName << "(" << propId << ") =" << value << "Success:" << success;
+    case CMD_HEARTBEAT:
+        // No action needed
+        return;
+    default:
+        qDebug() << "Unknown command type:" << cmdType;
+        return;
     }
 }
 
@@ -183,13 +175,15 @@ void GenericQMLBridge::sendPropertyList()
         QQmlProperty prop = m_properties[it.key()];
         QCborMap entry;
         entry[QStringLiteral("id")] = it.value();
-        entry[QStringLiteral("type")] = prop.property().typeName();
+        entry[QStringLiteral("type")] = QString::fromUtf8(prop.property().typeName());
         propList[it.key()] = entry;
     }
     QByteArray cbor;
     QCborStreamWriter writer(&cbor);
     QCborValue(propList).toCbor(writer);
-    QByteArray packet = QByteArray("\xFF\xFF", 2) + cbor;
+    QByteArray packet;
+    packet.append(static_cast<char>(RESP_GET_PROPERTY_LIST));
+    packet.append(cbor);
     sendSlipData(packet);
 }
 

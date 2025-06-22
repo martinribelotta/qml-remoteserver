@@ -11,12 +11,12 @@ from enum import IntEnum
 
 class ProtocolCommand(IntEnum):
     GET_PROPERTY_LIST = 0x00
-    SET_INT           = 0x01
-    SET_FLOAT         = 0x02
-    SET_STRING        = 0x03
-    SET_BOOL          = 0x04
+    SET_PROPERTY      = 0x10
     INVOKE_METHOD     = 0x05
     HEARTBEAT         = 0xFF
+
+class ProtocolResponse(IntEnum):
+    GET_PROPERTY_LIST = 0x80
 
 class DashboardTester:
     def __init__(self, host='localhost', port=8080):
@@ -49,20 +49,15 @@ class DashboardTester:
         self.get_property_list()
         time.sleep(1)
 
-    def send_float(self, prop_id, value):
-        data = struct.pack('<BBf', ProtocolCommand.SET_FLOAT, prop_id, value)
+    def send_properties(self, prop_map):
+        cbor_data = cbor2.dumps(prop_map)
+        data = bytes([ProtocolCommand.SET_PROPERTY]) + cbor_data
         encoded_data = SlipProcessor.encode_slip(data)
         self.sock.send(encoded_data)
 
-    def send_bool(self, prop_id, value):
-        data = struct.pack('<BBB', ProtocolCommand.SET_BOOL, prop_id, 1 if value else 0)
-        encoded_data = SlipProcessor.encode_slip(data)
-        self.sock.send(encoded_data)
-
-    def send_int(self, prop_id, value):
-        data = struct.pack('<BBi', ProtocolCommand.SET_INT, prop_id, value)
-        encoded_data = SlipProcessor.encode_slip(data)
-        self.sock.send(encoded_data)
+    def update_properties(self, updates):
+        # updates: dict {property_name: value}
+        self.send_properties(updates)
 
     def receive_data(self):
         while True:
@@ -77,17 +72,18 @@ class DashboardTester:
 
     def process_received_packet(self, packet):
         try:
-            if len(packet) >= 2 and packet[0] == ProtocolCommand.HEARTBEAT and packet[1] == ProtocolCommand.HEARTBEAT:
+            cmd = packet[0]
+            if cmd == ProtocolResponse.GET_PROPERTY_LIST:
                 try:
-                    cbor_data = packet[2:]
+                    cbor_data = packet[1:]
                     props = cbor2.loads(cbor_data)
                     self.process_property_list(props)
                 except Exception as e:
-                    print(f"Error processing CBOR property list: {e}")
+                    print(f"Error decoding CBOR property list: {e}")
             else:
-                print(f"Paquete recibido: {packet.hex()}")
+                print(f"Received packet with unknown or unhandled command: {packet.hex()}")
         except Exception as e:
-            print(f"Error procesando paquete: {e}")
+            print(f"Error processing packet: {e}")
 
     def process_property_list(self, props):
         print("Received properties:")
@@ -96,26 +92,22 @@ class DashboardTester:
             print(f"  {name}: ID={info['id']}, Type={info['type']}")
 
     def get_property_list(self):
-        data = bytes([ProtocolCommand.GET_PROPERTY_LIST, ProtocolCommand.GET_PROPERTY_LIST])
+        data = bytes([ProtocolCommand.GET_PROPERTY_LIST])
         encoded_data = SlipProcessor.encode_slip(data)
         self.sock.send(encoded_data)
 
-    def update_property(self, name, value):
-        if name not in self.properties:
-            print(f"Unknown property: {name}")
-            return
-        prop_info = self.properties[name]
-        prop_id = prop_info['id']
-        prop_type = prop_info['type']
-        print(f"Updating property '{name}' (ID: {prop_id}, Type: {prop_type}) with value: {value}")
-        if prop_type == 'bool':
-            self.send_bool(prop_id, value)
-        elif prop_type == 'int':
-            self.send_int(prop_id, value)
-        elif prop_type in ['double', 'float', 'qreal']:
-            self.send_float(prop_id, value)
-        else:
-            print(f"Unsupported property type: {prop_type}")
+    def send_heartbeat(self):
+        data = bytes([ProtocolCommand.HEARTBEAT])
+        encoded_data = SlipProcessor.encode_slip(data)
+        self.sock.send(encoded_data)
+
+    def invoke_method(self, method_id, params=None):
+        if params is None:
+            params = []
+        cbor_params = cbor2.dumps(params)
+        data = bytes([ProtocolCommand.INVOKE_METHOD, method_id]) + cbor_params
+        encoded_data = SlipProcessor.encode_slip(data)
+        self.sock.send(encoded_data)
 
     def calculate_smooth_value(self, param_name):
         current_time = time.time()
@@ -176,27 +168,30 @@ class DashboardTester:
             self.current_values['tank_level'] = self.calculate_smooth_value('tank_level')
             self.update_pump_states()
             alarm_active = self.should_trigger_alarm()
+            updates = {}
             for name, info in self.properties.items():
                 try:
                     if info['type'] in ['double', 'float', 'qreal']:
                         if 'temperature' in name.lower():
-                            self.update_property(name, self.current_values['temperature'])
+                            updates[name] = self.current_values['temperature']
                         elif 'pressure' in name.lower():
-                            self.update_property(name, self.current_values['pressure'])
+                            updates[name] = self.current_values['pressure']
                         elif 'humidity' in name.lower():
-                            self.update_property(name, self.current_values['humidity'])
+                            updates[name] = self.current_values['humidity']
                     elif info['type'] == 'bool':
                         if 'pump1' in name.lower():
-                            self.update_property(name, self.pump_states['pump1'])
+                            updates[name] = self.pump_states['pump1']
                         elif 'pump2' in name.lower():
-                            self.update_property(name, self.pump_states['pump2'])
+                            updates[name] = self.pump_states['pump2']
                         elif 'alarm' in name.lower():
-                            self.update_property(name, alarm_active)
+                            updates[name] = alarm_active
                     elif info['type'] == 'int':
                         if 'level' in name.lower() or 'tank' in name.lower():
-                            self.update_property(name, int(self.current_values['tank_level']))
+                            updates[name] = int(self.current_values['tank_level'])
                 except Exception as e:
                     print(f"Error updating property {name}: {e}")
+            if updates:
+                self.update_properties(updates)
             update_count += 1
             if update_count % 10 == 0:
                 print(f"\n--- Status Update #{update_count} ---")
