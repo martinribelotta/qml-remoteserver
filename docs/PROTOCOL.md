@@ -24,12 +24,12 @@ All packets are framed using SLIP for reliable transmission over serial and TCP 
 
 | Code  | Name                        | Direction | Payload (CBOR)         | Description                                 |
 |-------|-----------------------------|-----------|------------------------|---------------------------------------------|
-| 0x00  | CMD_GET_PROPERTY_LIST       | C→S       | none                   | Request property list                       |
-| 0x10  | CMD_SET_PROPERTY            | C→S       | map {id: value, ...}   | Set one or more properties by ID            |
-| 0x05  | CMD_INVOKE_METHOD           | C→S       | [method_id, params[]]  | Invoke method with parameters               |
+| 0x01  | CMD_GET_PROPERTY_LIST       | C→S       | none                   | Request property list                       |
+| 0x02  | CMD_SET_PROPERTY            | C→S       | map {id: value, ...}   | Set one or more properties by ID            |
+| 0x03  | CMD_INVOKE_METHOD           | C→S       | [method_id, params[]]  | Invoke method with parameters               |
+| 0x04  | CMD_HEARTBEAT               | C→S       | none                   | Heartbeat/keep-alive                       |
 | 0x20  | CMD_WATCH_PROPERTY          | C→S       | [id, ...]              | Watch property IDs for change notifications |
-| 0xFF  | CMD_HEARTBEAT               | C→S       | none                   | Heartbeat/keep-alive                       |
-| 0x80  | RESP_GET_PROPERTY_LIST      | S→C       | map {name: {id, type}} | Property list response                      |
+| 0x81  | RESP_GET_PROPERTY_LIST      | S→C       | map {name: {id, type}} | Property list response                      |
 | 0x82  | RESP_PROPERTY_CHANGE        | S→C       | map {id: value, ...}   | Notification of watched property changes    |
 
 - C→S: Client to Server
@@ -37,18 +37,18 @@ All packets are framed using SLIP for reliable transmission over serial and TCP 
 
 ## Command Details
 
-### CMD_GET_PROPERTY_LIST (0x00)
+### CMD_GET_PROPERTY_LIST (0x01)
 
 Request the list of available properties.
 
-- **Packet:** `[0x00]`
-- **Response:** `[0x80, <CBOR_MAP>]`
+- **Packet:** `[0x01]`
+- **Response:** `[0x81, <CBOR_MAP>]`
 
-### RESP_GET_PROPERTY_LIST (0x80)
+### RESP_GET_PROPERTY_LIST (0x81)
 
 Response to CMD_GET_PROPERTY_LIST. Contains a CBOR map:
 
-- **Format:** `[0x80, <CBOR_MAP>]`
+- **Format:** `[0x81, <CBOR_MAP>]`
 - **CBOR_MAP Example:**
 
   ```cbor-diag
@@ -61,18 +61,18 @@ Response to CMD_GET_PROPERTY_LIST. Contains a CBOR map:
   }
   ```
 
-### CMD_SET_PROPERTY (0x10)
+### CMD_SET_PROPERTY (0x02)
 
 Set one or more properties by ID.
 
-- **Packet:** `[0x10, <CBOR_MAP>]`
+- **Packet:** `[0x02, <CBOR_MAP>]`
 - **CBOR_MAP Example:** `{ 5: 42 }` (set setpoint to 42)
 
-### CMD_INVOKE_METHOD (0x05)
+### CMD_INVOKE_METHOD (0x03)
 
 Invoke a method by ID, with optional parameters.
 
-- **Packet:** `[0x05, method_id, <CBOR_ARRAY>]`
+- **Packet:** `[0x03, method_id, <CBOR_ARRAY>]`
 - **CBOR_ARRAY Example:** `[param1, param2, ...]`
 
 ### CMD_WATCH_PROPERTY (0x20)
@@ -91,24 +91,24 @@ Notification sent by the server when a watched property changes.
 - **CBOR_MAP Example:** `{ 5: 43 }` (setpoint changed to 43)
 - Multiple properties may be included if several change at once.
 
-### CMD_HEARTBEAT (0xFF)
+### CMD_HEARTBEAT (0x04)
 
 Heartbeat/keep-alive packet.
 
-- **Packet:** `[0xFF]`
+- **Packet:** `[0x04]`
 
 ## Example Session
 
 1. **Client requests property list:**
 
    ```plaintext
-   SLIP: [0xC0, 0x00, 0xC0]
+   SLIP: [0xC0, 0x01, 0xC0]
    ```
 
 2. **Server responds with property list:**
 
    ```plaintext
-   SLIP: [0xC0, 0x80, <CBOR_MAP>, 0xC0]
+   SLIP: [0xC0, 0x81, <CBOR_MAP>, 0xC0]
    ```
 
 3. **Client requests to watch the setpoint property:**
@@ -126,13 +126,13 @@ Heartbeat/keep-alive packet.
 5. **Client sets setpoint property:**
 
    ```plaintext
-   SLIP: [0xC0, 0x10, {5: 45}, 0xC0]
+   SLIP: [0xC0, 0x02, {5: 45}, 0xC0]
    ```
 
 6. **Heartbeat:**
 
    ```plaintext
-   SLIP: [0xC0, 0xFF, 0xC0]
+   SLIP: [0xC0, 0x04, 0xC0]
    ```
 
 ## Implementation Notes
@@ -159,4 +159,4 @@ Heartbeat/keep-alive packet.
 
 ## Changelog
 
-- 2025-06-22: Protocol modernized to use CBOR for all payloads, property watching/notification added, all property access by ID, documentation updated.
+- 2025-06-22: Protocol enums updated to match implementation. All command/response codes now reflect the codebase.
