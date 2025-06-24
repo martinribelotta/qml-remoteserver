@@ -34,23 +34,7 @@ qml-remoteserver/
 
 ## High-Level Architecture
 
-```plaintext
-┌─────────────────┐    SLIP/Serial     ┌──────────────────┐    Qt Signals     ┌─────────────────┐
-│ Embedded Device │ ◄────────────────► │ GenericQMLBridge │ ◄───────────────► │   QML Engine    │
-└─────────────────┘                    └──────────────────┘                   └─────────────────┘
-                                               │                                       │
-┌─────────────────┐    SLIP/TCP/IP             │                                       │
-│ Python Client   │ ◄──────────────────────────┘                                       │
-└─────────────────┘                                                                    │
-                                                                                       ▼
-                                                                              ┌─────────────────┐
-                                                                              │  Dashboard UI   │
-                                                                              │  - Temperature  │
-                                                                              │  - Pressure     │
-                                                                              │  - Pumps        │
-                                                                              │  - Alarms       │
-                                                                              └─────────────────┘
-```
+![High-Level Architecture](docs/architecture.png)
 
 ### Core Components
 
