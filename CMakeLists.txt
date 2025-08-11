@@ -2,27 +2,24 @@ cmake_minimum_required(VERSION 3.16)
 
 project(qml-remoteserver VERSION 0.1 LANGUAGES CXX)
 
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick SerialPort)
+find_package(Qt6 6.2 REQUIRED COMPONENTS Core Quick SerialPort Network)
 
-qt_standard_project_setup(REQUIRES 6.5)
+# Enable automatic MOC, UIC and RCC processing
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
 
 qt_add_executable(appqml-remoteserver
     main.cpp
-)
-
-qt_add_qml_module(appqml-remoteserver
-    URI qml-remoteserver
-    VERSION 1.0
-    QML_FILES
-    SOURCES
-        genericqmlbridge.h
-        genericqmlbridge.cpp
-        slipprocessor.h
-        slipprocessor.cpp
-        datadecoder.hpp
-        QmlPropertyObserver.hpp
+    genericqmlbridge.h
+    genericqmlbridge.cpp
+    slipprocessor.h
+    slipprocessor.cpp
+    datadecoder.hpp
+    QmlPropertyObserver.hpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -37,7 +34,7 @@ set_target_properties(appqml-remoteserver PROPERTIES
 )
 
 target_link_libraries(appqml-remoteserver
-    PRIVATE Qt6::Quick Qt6::SerialPort
+    PRIVATE Qt6::Core Qt6::Quick Qt6::SerialPort Qt6::Network
 )
 
 include(GNUInstallDirs)

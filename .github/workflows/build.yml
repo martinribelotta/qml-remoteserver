@@ -7,55 +7,44 @@ on:
     branches: [ master, main ]
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04
+  build-appimage:
+    runs-on: ubuntu-20.04
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       
-    - name: Install Qt6 and dependencies
+    - name: Install system dependencies
       run: |
         sudo apt update
         sudo apt install -y \
-          qt6-base-dev \
-          qt6-declarative-dev \
-          qml6-module-qtquick \
-          qml6-module-qtquick-controls \
-          qml6-module-qtquick-layouts \
-          qml6-module-qtquick-window \
-          cmake \
-          ninja-build \
           build-essential \
+          cmake \
+          wget \
+          file \
+          libfuse2 \
+          python3-pip \
+          imagemagick \
           libgl1-mesa-dev \
-          libxkbcommon-dev
+          libxkbcommon-dev \
+          libxrandr2 \
+          libxss1 \
+          libgconf-2-4 \
+          libasound2-dev
           
-    - name: Create build directory
-      run: mkdir -p builds/Qt-6.5.3-linux-g++/Debug
-      
-    - name: Configure CMake
+    - name: Build AppImage
       run: |
-        cd builds/Qt-6.5.3-linux-g++/Debug
-        cmake -G Ninja \
-          -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/cmake/Qt6 \
-          ../../..
-          
-    - name: Build
-      run: |
-        cd builds/Qt-6.5.3-linux-g++/Debug
-        ninja
+        ./ci/deploy/linux/build-appimage.sh
         
-    - name: Test executable exists
+    - name: Test AppImage
       run: |
-        test -f builds/Qt-6.5.3-linux-g++/Debug/appqml-remoteserver
-        echo "Build successful - executable created"
+        ls -la *.AppImage
+        file *.AppImage
+        echo "AppImage created successfully"
         
-    - name: Upload build artifacts
+    - name: Upload AppImage artifact
       uses: actions/upload-artifact@v4
       with:
-        name: qml-remoteserver-ubuntu22.04
-        path: |
-          builds/Qt-6.5.3-linux-g++/Debug/appqml-remoteserver
-          examples/
+        name: QML-Remote-Server-Linux-x86_64
+        path: "*.AppImage"
         retention-days: 30

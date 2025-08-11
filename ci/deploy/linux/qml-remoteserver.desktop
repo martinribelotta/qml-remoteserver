@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=QML Remote Server
+Comment=Qt/QML-based server for embedded devices
+Exec=appqml-remoteserver
+Icon=qml-remoteserver
+Terminal=false
+Categories=Development;Qt;
+Keywords=Qt;QML;Remote;Server;Embedded;SCADA;
